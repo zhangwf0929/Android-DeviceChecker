@@ -1,0 +1,23 @@
+<resources>
+    <string name="app_name">设备检测</string>
+    <string name="start_check">开始测试</string>
+    <string name="copy_result">复制结果</string>
+    <string name="copy_successful">复制成功</string>
+
+    <string name="model">型号:</string>
+    <string name="android_version">Android版本:</string>
+    <string name="rom_version">Rom版本:</string>
+
+    <string name="app_info">应用信息:</string>
+    <string name="connectivity_type">联网方式:</string>
+    <string name="connectivity_type_none">未联网</string>
+    <string name="connectivity_type_wifi">WiFi</string>
+    <string name="connectivity_type_mobile">数据流量</string>
+
+    <string name="local_dns">本地DNS解析:</string>
+    <string name="format_public_dns">公共DNS(%s)解析:</string>
+    <string name="dns_fail">DNS解析失败</string>
+
+    <string name="api_request">api请求:</string>
+    <string name="api_request_fail">api请求失败</string>
+</resources>
