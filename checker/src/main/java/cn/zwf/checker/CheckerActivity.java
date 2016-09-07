@@ -2,6 +2,7 @@ package cn.zwf.checker;
 
 import android.content.ClipData;
 import android.content.ClipboardManager;
+import android.content.DialogInterface;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.os.Bundle;
@@ -31,6 +32,23 @@ public class CheckerActivity extends AppCompatActivity {
     private ScrollView sv;
     private TextView tvResult;
 
+    private ProgressDialogFragment dialog;
+
+    private LocalDNSTask mLocalDNSTask;
+    private PublicDNSTask mPublicDNSTask;
+    private ApiTask mApiTask;
+    private DownloadTask mFileDownloadTask;
+    private DownloadTask mImageDownloadTask;
+
+    private static final int FLAG_LOCAL_DNS = 0x00001;
+    private static final int FLAG_PUBLIC_DNS = 0x00010;
+    private static final int FLAG_API = 0x00100;
+    private static final int FLAG_DOWNLOAD_FILE = 0x01000;
+    private static final int FLAG_DOWNLOAD_IMAGE = 0x10000;
+    private static final int FLAG_FINISH = 0x11111;
+    // 没完成一项检测做一位与操作，0x11111时表示全部完成
+    private int mFlagFinish = 0x00000;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -51,19 +69,7 @@ public class CheckerActivity extends AppCompatActivity {
         findViewById(R.id.btn_check).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                tvResult.setText(null);
-
-                appendLog(Utils.getModel(CheckerActivity.this));
-                appendLog(Utils.getAndroidInfo(CheckerActivity.this));
-                appendLog(Utils.getRomInfo(CheckerActivity.this));
-                appendLog(Utils.getNetworkType(CheckerActivity.this));
-                appendLog(Utils.getAppInfo(CheckerActivity.this));
-
-                localDNS();
-                publicDNS();
-                apiCheck();
-                fileDownloadCheck();
-                imageDownloadCheck();
+                startCheck();
             }
         });
 
@@ -76,10 +82,80 @@ public class CheckerActivity extends AppCompatActivity {
         });
     }
 
+    @Override
+    protected void onDestroy() {
+        dismissDialog();
+        super.onDestroy();
+    }
+
+    private void showDialog() {
+        if (dialog == null) {
+            dialog = new ProgressDialogFragment();
+            dialog.setOnCancelListener(new DialogInterface.OnCancelListener() {
+                @Override
+                public void onCancel(DialogInterface dialog) {
+                    stopCheck();
+                }
+            });
+        }
+        dialog.show(getSupportFragmentManager(), "dialog");
+        dialog.setMessage(getString(R.string.checking));
+    }
+
+    private void dismissDialog() {
+        if (dialog != null) {
+            dialog.dismissAllowingStateLoss();
+        }
+    }
+
+    private void startCheck() {
+        tvResult.setText(null);
+        showDialog();
+
+        appendLog(Utils.getModel(CheckerActivity.this));
+        appendLog(Utils.getAndroidInfo(CheckerActivity.this));
+        appendLog(Utils.getRomInfo(CheckerActivity.this));
+        appendLog(Utils.getNetworkType(CheckerActivity.this));
+        appendLog(Utils.getAppInfo(CheckerActivity.this));
+
+        localDNS();
+        publicDNS();
+        apiCheck();
+        fileDownloadCheck();
+        imageDownloadCheck();
+    }
+
+    private void stopCheck() {
+        if (mLocalDNSTask != null && !mLocalDNSTask.isCancelled()) {
+            mLocalDNSTask.cancel(true);
+        }
+        if (mPublicDNSTask != null && !mPublicDNSTask.isCancelled()) {
+            mPublicDNSTask.cancel(true);
+        }
+        if (mApiTask != null && !mApiTask.isCancelled()) {
+            mApiTask.cancel(true);
+        }
+        if (mFileDownloadTask != null && !mFileDownloadTask.isCancelled()) {
+            mFileDownloadTask.cancel(true);
+        }
+        if (mImageDownloadTask != null && !mImageDownloadTask.isCancelled()) {
+            mImageDownloadTask.cancel(true);
+        }
+        appendLog(getString(R.string.check_stop));
+    }
+
+    private void finishTask(int taskFlag) {
+        mFlagFinish = mFlagFinish | taskFlag;
+        if (mFlagFinish == FLAG_FINISH) {
+            appendLog(getString(R.string.check_finish));
+            dismissDialog();
+        }
+    }
+
     private void localDNS() {
         final List<String> domains = Checker.getInstance().mDomains;
         if (!Utils.isEmpty(domains)) {
-            LocalDNSTask task = new LocalDNSTask(new LocalDNSTask.Callback() {
+            mLocalDNSTask = new LocalDNSTask(new LocalDNSTask.Callback() {
                 @Override
                 public void onFinish(Map<String, String> addresses) {
                     if (!Utils.isEmpty(addresses)) {
@@ -91,9 +167,12 @@ public class CheckerActivity extends AppCompatActivity {
                             appendLog(getString(R.string.local_dns) + "\n" + domain + "\n-->\n" + address);
                         }
                     }
+                    finishTask(FLAG_LOCAL_DNS);
                 }
             });
-            task.execute(domains.toArray(new String[domains.size()]));
+            mLocalDNSTask.execute(domains.toArray(new String[domains.size()]));
+        } else {
+            finishTask(FLAG_LOCAL_DNS);
         }
     }
 
@@ -101,7 +180,7 @@ public class CheckerActivity extends AppCompatActivity {
         final List<String> dnses = Checker.getInstance().mDNSes;
         final List<String> domains = Checker.getInstance().mDomains;
         if (!Utils.isEmpty(dnses) && !Utils.isEmpty(domains)) {
-            PublicDNSTask task = new PublicDNSTask(new PublicDNSTask.Callback() {
+            mPublicDNSTask = new PublicDNSTask(new PublicDNSTask.Callback() {
                 @Override
                 public void onFinish(Map<String, Map<String, String>> addresses) {
                     if (!Utils.isEmpty(addresses)) {
@@ -120,6 +199,7 @@ public class CheckerActivity extends AppCompatActivity {
                             }
                         }
                     }
+                    finishTask(FLAG_PUBLIC_DNS);
                 }
             });
             PublicDNSTask.PublicDNS[] publicDNSes = new PublicDNSTask.PublicDNS[dnses.size()];
@@ -129,14 +209,16 @@ public class CheckerActivity extends AppCompatActivity {
                 publicDNS.domains = domains;
                 publicDNSes[i] = publicDNS;
             }
-            task.execute(publicDNSes);
+            mPublicDNSTask.execute(publicDNSes);
+        } else {
+            finishTask(FLAG_PUBLIC_DNS);
         }
     }
 
     private void apiCheck() {
         final List<String> apiUrls = Checker.getInstance().mApiUrls;
         if (!Utils.isEmpty(apiUrls)) {
-            ApiTask task = new ApiTask(new ApiTask.Callback() {
+            mApiTask = new ApiTask(new ApiTask.Callback() {
                 @Override
                 public void onFinish(Map<String, ApiTask.Response> addresses) {
                     if (!Utils.isEmpty(addresses)) {
@@ -154,16 +236,19 @@ public class CheckerActivity extends AppCompatActivity {
                             appendLog(getString(R.string.api_request) + "\n" + url + "\n-->\n" + result);
                         }
                     }
+                    finishTask(FLAG_API);
                 }
             });
-            task.execute(apiUrls.toArray(new String[apiUrls.size()]));
+            mApiTask.execute(apiUrls.toArray(new String[apiUrls.size()]));
+        } else {
+            finishTask(FLAG_API);
         }
     }
 
     private void fileDownloadCheck() {
         final Map<String, String> fileUrls = Checker.getInstance().mFileUrls;
         if (!Utils.isEmpty(fileUrls)) {
-            DownloadTask task = new DownloadTask(this, new DownloadTask.Callback() {
+            mFileDownloadTask = new DownloadTask(this, new DownloadTask.Callback() {
                 @Override
                 public void onFinish(Map<String, DownloadTask.DownloadFile> downloadFiles) {
                     if (!Utils.isEmpty(downloadFiles)) {
@@ -191,16 +276,19 @@ public class CheckerActivity extends AppCompatActivity {
                             appendLog(getString(R.string.file_download) + "\n" + url + "\n-->\n" + result);
                         }
                     }
+                    finishTask(FLAG_DOWNLOAD_FILE);
                 }
             });
-            task.execute(fileUrls.keySet().toArray(new String[fileUrls.keySet().size()]));
+            mFileDownloadTask.execute(fileUrls.keySet().toArray(new String[fileUrls.keySet().size()]));
+        } else {
+            finishTask(FLAG_DOWNLOAD_FILE);
         }
     }
 
     private void imageDownloadCheck() {
         final List<String> imageUrls = Checker.getInstance().mImageUrls;
         if (!Utils.isEmpty(imageUrls)) {
-            DownloadTask task = new DownloadTask(this, new DownloadTask.Callback() {
+            mImageDownloadTask = new DownloadTask(this, new DownloadTask.Callback() {
                 @Override
                 public void onFinish(Map<String, DownloadTask.DownloadFile> downloadFiles) {
                     if (!Utils.isEmpty(downloadFiles)) {
@@ -218,9 +306,12 @@ public class CheckerActivity extends AppCompatActivity {
                             }
                         }
                     }
+                    finishTask(FLAG_DOWNLOAD_IMAGE);
                 }
             });
-            task.execute(imageUrls.toArray(new String[imageUrls.size()]));
+            mImageDownloadTask.execute(imageUrls.toArray(new String[imageUrls.size()]));
+        } else {
+            finishTask(FLAG_DOWNLOAD_IMAGE);
         }
     }
 
@@ -244,6 +335,7 @@ public class CheckerActivity extends AppCompatActivity {
         SpannableString spanString = new SpannableString("image");
         spanString.setSpan(imgSpan, 0, 5, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
         tvResult.append(spanString);
+        tvResult.append("\n");
 
         scrollToBottom();
     }
