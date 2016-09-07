@@ -23,7 +23,6 @@ import java.util.Map;
  * Created by ZhangWF(zhangwf0929@gmail.com) on 16/9/6.
  */
 public class CheckerActivity extends AppCompatActivity {
-    private static final String TAG = "Checker";
 
     private TextView tvResult;
 
@@ -56,8 +55,8 @@ public class CheckerActivity extends AppCompatActivity {
 
                 localDNS();
                 publicDNS();
-
                 apiCheck();
+                downloadCheck();
             }
         });
 
@@ -76,7 +75,7 @@ public class CheckerActivity extends AppCompatActivity {
             LocalDNSTask task = new LocalDNSTask(new LocalDNSTask.Callback() {
                 @Override
                 public void onFinish(Map<String, String> addresses) {
-                    if (addresses != null) {
+                    if (!Utils.isEmpty(addresses)) {
                         for (String domain : domains) {
                             String address = addresses.get(domain);
                             if (TextUtils.isEmpty(address)) {
@@ -98,11 +97,13 @@ public class CheckerActivity extends AppCompatActivity {
             PublicDNSTask task = new PublicDNSTask(new PublicDNSTask.Callback() {
                 @Override
                 public void onFinish(Map<String, Map<String, String>> addresses) {
-                    if (addresses != null) {
+                    if (!Utils.isEmpty(addresses)) {
                         for (String dns : dnses) {
+                            // 遍历dns服务器
                             Map<String, String> map = addresses.get(dns);
                             if (map != null) {
                                 for (String domain : domains) {
+                                    // 指定dns服务器逐个解析域名
                                     String address = map.get(domain);
                                     if (TextUtils.isEmpty(address)) {
                                         address = getString(R.string.dns_fail);
@@ -131,7 +132,7 @@ public class CheckerActivity extends AppCompatActivity {
             ApiTask task = new ApiTask(new ApiTask.Callback() {
                 @Override
                 public void onFinish(Map<String, ApiTask.Response> addresses) {
-                    if (addresses != null) {
+                    if (!Utils.isEmpty(addresses)) {
                         for (String url : apiUrls) {
                             ApiTask.Response response = addresses.get(url);
                             String result;
@@ -149,6 +150,43 @@ public class CheckerActivity extends AppCompatActivity {
                 }
             });
             task.execute(apiUrls.toArray(new String[apiUrls.size()]));
+        }
+    }
+
+    private void downloadCheck() {
+        final Map<String, String> fileUrls = Checker.getInstance().mFileUrls;
+        if (!Utils.isEmpty(fileUrls)) {
+            DownloadTask task = new DownloadTask(this, new DownloadTask.Callback() {
+                @Override
+                public void onFinish(Map<String, DownloadTask.DownloadFile> downloadFiles) {
+                    if (!Utils.isEmpty(downloadFiles)) {
+                        for (String url : fileUrls.keySet()) {
+                            String md5 = fileUrls.get(url);
+                            DownloadTask.DownloadFile downloadFile = downloadFiles.get(url);
+                            String result;
+                            if (downloadFile == null) {
+                                result = getString(R.string.file_download_fail);
+                            } else {
+                                result = getString(R.string.file_download_success) + "\n" +
+                                        getString(R.string.file_path) + downloadFile.path + "\n" +
+                                        getString(R.string.file_md5) + downloadFile.md5;
+
+                                // 如果有提供md5
+                                if (!TextUtils.isEmpty(md5)) {
+                                    // 更新url展示
+                                    url = url + "\n" + getString(R.string.file_md5) + md5;
+                                    // 检查是否一致
+                                    result = result + "\n" + (md5.equals(downloadFile.md5) ?
+                                            getString(R.string.md5_match) :
+                                            getString(R.string.md5_not_match));
+                                }
+                            }
+                            addLog(getString(R.string.file_download) + "\n" + url + "\n-->\n" + result);
+                        }
+                    }
+                }
+            });
+            task.execute(fileUrls.keySet().toArray(new String[fileUrls.keySet().size()]));
         }
     }
 

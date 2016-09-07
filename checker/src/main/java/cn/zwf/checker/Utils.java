@@ -8,15 +8,52 @@ import android.net.NetworkInfo;
 import android.os.Build;
 
 import java.io.BufferedReader;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.security.MessageDigest;
 import java.util.Collection;
+import java.util.Map;
 
 /**
  * 工具类
  * Created by ZhangWF(zhangwf0929@gmail.com) on 16/9/6.
  */
 public class Utils {
+
+    public static final String TAG = "Checker";
+
+    private static final char HEX_DIGITS[] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+            'A', 'B', 'C', 'D', 'E', 'F'};
+
+    public static String toHexString(byte[] b) {
+        StringBuilder sb = new StringBuilder(b.length * 2);
+        for (int i = 0; i < b.length; i++) {
+            sb.append(HEX_DIGITS[(b[i] & 0xf0) >>> 4]);
+            sb.append(HEX_DIGITS[b[i] & 0x0f]);
+        }
+        return sb.toString().toLowerCase();
+    }
+
+    public static String getMd5(String filepath) {
+        InputStream fis;
+        byte[] buffer = new byte[1024];
+        int numRead = 0;
+        MessageDigest md5;
+        try {
+            fis = new FileInputStream(filepath);
+            md5 = MessageDigest.getInstance("MD5");
+            while ((numRead = fis.read(buffer)) > 0) {
+                md5.update(buffer, 0, numRead);
+            }
+            fis.close();
+            return toHexString(md5.digest());
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
 
     public static String getModel(Context context) {
         return context.getString(R.string.model) + Build.MANUFACTURER + " " + Build.MODEL;
@@ -58,12 +95,16 @@ public class Utils {
         return context.getString(R.string.app_info) + result;
     }
 
-    public static boolean isEmpty(Collection c) {
+    public static <T> boolean isEmpty(Collection<T> c) {
         return c == null || c.size() == 0;
     }
 
     public static <T> boolean isEmpty(T[] array) {
         return array == null || array.length == 0;
+    }
+
+    public static <K, V> boolean isEmpty(Map<K, V> map) {
+        return map == null || isEmpty(map.keySet());
     }
 
     public String getLocalDNS() {

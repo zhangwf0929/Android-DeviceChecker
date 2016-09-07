@@ -18,7 +18,7 @@ public class Checker {
     List<String> mDomains;
     List<String> mApiUrls;
     List<String> mImageUrls;
-    List<Map<String, String>> mFileUrls;
+    Map<String, String> mFileUrls;
     private Context mContext;
 
     private static Checker ourInstance = new Checker();
@@ -84,16 +84,8 @@ public class Checker {
         return this;
     }
 
-    @SafeVarargs
-    public final Checker setFileUrl(Map<String, String>... urlMd5Map) {
-        if (mFileUrls == null) {
-            mFileUrls = new ArrayList<>();
-        } else {
-            mFileUrls.clear();
-        }
-        if (urlMd5Map != null) {
-            Collections.addAll(mFileUrls, urlMd5Map);
-        }
+    public final Checker setFileUrl(Map<String, String> urlMd5Map) {
+        mFileUrls = urlMd5Map;
         return this;
     }
 
