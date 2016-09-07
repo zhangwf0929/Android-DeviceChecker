@@ -3,6 +3,7 @@ package cn.zwf.checker;
 import android.content.Context;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
+import android.graphics.BitmapFactory;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Build;
@@ -142,5 +143,26 @@ public class Utils {
             }
         }
         return dnsIP;
+    }
+
+    public static BitmapFactory.Options getBitmapOptions(String filepath, int maxWidth, int maxHeight) {
+        // 判断一下图片大小
+        BitmapFactory.Options options = new BitmapFactory.Options();
+        options.inJustDecodeBounds = true;
+        BitmapFactory.decodeFile(filepath, options);
+        int width = options.outWidth;
+        int height = options.outHeight;
+
+        // 计算缩放比
+        int inSampleSize = 1;
+        if (width > maxWidth || height > maxHeight) {
+            int widthRadio = Math.round(width * 1.0f / maxWidth);
+            int heightRadio = Math.round(height * 1.0f / maxHeight);
+
+            inSampleSize = Math.max(widthRadio, heightRadio);
+        }
+        options.inSampleSize = inSampleSize;
+        options.inJustDecodeBounds = false;
+        return options;
     }
 }

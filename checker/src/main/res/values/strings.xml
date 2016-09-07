@@ -22,11 +22,13 @@
     <string name="api_request_fail">api请求失败</string>
 
     <string name="file_download">文件下载:</string>
-    <string name="file_download_success">下载成功</string>
-    <string name="file_download_fail">下载失败</string>
+    <string name="download_success">下载成功</string>
+    <string name="download_fail">下载失败</string>
     <string name="file_url">文件地址:</string>
     <string name="file_md5">md5:</string>
     <string name="file_path">保存目录:</string>
     <string name="md5_match">md5一致</string>
     <string name="md5_not_match">md5不一致</string>
+
+    <string name="image_download">图片下载:</string>
 </resources>

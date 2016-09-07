@@ -2,6 +2,8 @@ package cn.zwf.checker;
 
 import android.content.ClipData;
 import android.content.ClipboardManager;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.os.Bundle;
 import android.support.annotation.StringRes;
 import android.support.v4.content.ContextCompat;
@@ -11,7 +13,9 @@ import android.text.Spannable;
 import android.text.SpannableString;
 import android.text.TextUtils;
 import android.text.style.ForegroundColorSpan;
+import android.text.style.ImageSpan;
 import android.view.View;
+import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -24,6 +28,7 @@ import java.util.Map;
  */
 public class CheckerActivity extends AppCompatActivity {
 
+    private ScrollView sv;
     private TextView tvResult;
 
     @Override
@@ -40,6 +45,7 @@ public class CheckerActivity extends AppCompatActivity {
             }
         });
 
+        sv = (ScrollView) findViewById(R.id.sv);
         tvResult = (TextView) findViewById(R.id.tv_result);
 
         findViewById(R.id.btn_check).setOnClickListener(new View.OnClickListener() {
@@ -47,16 +53,17 @@ public class CheckerActivity extends AppCompatActivity {
             public void onClick(View v) {
                 tvResult.setText(null);
 
-                addLog(Utils.getModel(CheckerActivity.this));
-                addLog(Utils.getAndroidInfo(CheckerActivity.this));
-                addLog(Utils.getRomInfo(CheckerActivity.this));
-                addLog(Utils.getNetworkType(CheckerActivity.this));
-                addLog(Utils.getAppInfo(CheckerActivity.this));
+                appendLog(Utils.getModel(CheckerActivity.this));
+                appendLog(Utils.getAndroidInfo(CheckerActivity.this));
+                appendLog(Utils.getRomInfo(CheckerActivity.this));
+                appendLog(Utils.getNetworkType(CheckerActivity.this));
+                appendLog(Utils.getAppInfo(CheckerActivity.this));
 
                 localDNS();
                 publicDNS();
                 apiCheck();
-                downloadCheck();
+                fileDownloadCheck();
+                imageDownloadCheck();
             }
         });
 
@@ -81,7 +88,7 @@ public class CheckerActivity extends AppCompatActivity {
                             if (TextUtils.isEmpty(address)) {
                                 address = getString(R.string.dns_fail);
                             }
-                            addLog(getString(R.string.local_dns) + "\n" + domain + "\n-->\n" + address);
+                            appendLog(getString(R.string.local_dns) + "\n" + domain + "\n-->\n" + address);
                         }
                     }
                 }
@@ -108,7 +115,7 @@ public class CheckerActivity extends AppCompatActivity {
                                     if (TextUtils.isEmpty(address)) {
                                         address = getString(R.string.dns_fail);
                                     }
-                                    addLog(getString(R.string.format_public_dns, dns) + "\n" + domain + "\n-->\n" + address);
+                                    appendLog(getString(R.string.format_public_dns, dns) + "\n" + domain + "\n-->\n" + address);
                                 }
                             }
                         }
@@ -144,7 +151,7 @@ public class CheckerActivity extends AppCompatActivity {
                                     result = result + "\n" + response.raw;
                                 }
                             }
-                            addLog(getString(R.string.api_request) + "\n" + url + "\n-->\n" + result);
+                            appendLog(getString(R.string.api_request) + "\n" + url + "\n-->\n" + result);
                         }
                     }
                 }
@@ -153,7 +160,7 @@ public class CheckerActivity extends AppCompatActivity {
         }
     }
 
-    private void downloadCheck() {
+    private void fileDownloadCheck() {
         final Map<String, String> fileUrls = Checker.getInstance().mFileUrls;
         if (!Utils.isEmpty(fileUrls)) {
             DownloadTask task = new DownloadTask(this, new DownloadTask.Callback() {
@@ -165,9 +172,9 @@ public class CheckerActivity extends AppCompatActivity {
                             DownloadTask.DownloadFile downloadFile = downloadFiles.get(url);
                             String result;
                             if (downloadFile == null) {
-                                result = getString(R.string.file_download_fail);
+                                result = getString(R.string.download_fail);
                             } else {
-                                result = getString(R.string.file_download_success) + "\n" +
+                                result = getString(R.string.download_success) + "\n" +
                                         getString(R.string.file_path) + downloadFile.path + "\n" +
                                         getString(R.string.file_md5) + downloadFile.md5;
 
@@ -181,7 +188,7 @@ public class CheckerActivity extends AppCompatActivity {
                                             getString(R.string.md5_not_match));
                                 }
                             }
-                            addLog(getString(R.string.file_download) + "\n" + url + "\n-->\n" + result);
+                            appendLog(getString(R.string.file_download) + "\n" + url + "\n-->\n" + result);
                         }
                     }
                 }
@@ -190,7 +197,34 @@ public class CheckerActivity extends AppCompatActivity {
         }
     }
 
-    private void addLog(CharSequence s) {
+    private void imageDownloadCheck() {
+        final List<String> imageUrls = Checker.getInstance().mImageUrls;
+        if (!Utils.isEmpty(imageUrls)) {
+            DownloadTask task = new DownloadTask(this, new DownloadTask.Callback() {
+                @Override
+                public void onFinish(Map<String, DownloadTask.DownloadFile> downloadFiles) {
+                    if (!Utils.isEmpty(downloadFiles)) {
+                        for (String url : imageUrls) {
+                            DownloadTask.DownloadFile downloadFile = downloadFiles.get(url);
+                            String result;
+                            if (downloadFile == null) {
+                                appendLog(getString(R.string.image_download) + "\n" + url + "\n-->\n" +
+                                        getString(R.string.download_fail) + "\n");
+                            } else {
+                                result = getString(R.string.download_success) + "\n" +
+                                        getString(R.string.file_path) + downloadFile.path;
+                                appendLog(getString(R.string.image_download) + "\n" + url + "\n-->\n" + result + "\n");
+                                appendImage(downloadFile.path);
+                            }
+                        }
+                    }
+                }
+            });
+            task.execute(imageUrls.toArray(new String[imageUrls.size()]));
+        }
+    }
+
+    private void appendLog(CharSequence s) {
         SpannableString sp = new SpannableString(s);
         int prefix = s.toString().indexOf(":") + 1;
         sp.setSpan(new ForegroundColorSpan(ContextCompat.getColor(this, R.color.blue)),
@@ -198,6 +232,29 @@ public class CheckerActivity extends AppCompatActivity {
 
         tvResult.append(sp);
         tvResult.append("\n");
+
+        scrollToBottom();
+    }
+
+    private void appendImage(String filepath) {
+        // 判断一下图片大小
+        BitmapFactory.Options options = Utils.getBitmapOptions(filepath, 180, 320);
+        Bitmap b = BitmapFactory.decodeFile(filepath, options);
+        ImageSpan imgSpan = new ImageSpan(this, b);
+        SpannableString spanString = new SpannableString("image");
+        spanString.setSpan(imgSpan, 0, 5, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+        tvResult.append(spanString);
+
+        scrollToBottom();
+    }
+
+    private void scrollToBottom() {
+        sv.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                sv.fullScroll(View.FOCUS_DOWN);
+            }
+        }, 100);
     }
 
     private void copyText(CharSequence s) {
