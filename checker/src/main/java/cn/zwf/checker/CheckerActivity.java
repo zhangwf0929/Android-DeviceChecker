@@ -151,6 +151,9 @@ public class CheckerActivity extends AppCompatActivity {
         if (mFlagFinish == FLAG_FINISH) {
             appendLog(getString(R.string.check_finish));
             dismissDialog();
+            if (Checker.getInstance().callback != null) {
+                Checker.getInstance().callback.onFinish(tvResult.getText().toString());
+            }
         }
     }
 

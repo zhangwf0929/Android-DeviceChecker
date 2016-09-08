@@ -14,12 +14,17 @@ import java.util.Map;
  */
 public class Checker {
 
+    public interface Callback {
+        void onFinish(String result);
+    }
+
     List<String> mDNSes;
     List<String> mDomains;
     List<String> mApiUrls;
     List<String> mImageUrls;
     Map<String, String> mFileUrls;
     private Context mContext;
+    Callback callback;
 
     private static Checker ourInstance = new Checker();
 
@@ -84,8 +89,13 @@ public class Checker {
         return this;
     }
 
-    public final Checker setFileUrl(Map<String, String> urlMd5Map) {
+    public Checker setFileUrl(Map<String, String> urlMd5Map) {
         mFileUrls = urlMd5Map;
+        return this;
+    }
+
+    public Checker setCallback(Callback callback) {
+        this.callback = callback;
         return this;
     }
 

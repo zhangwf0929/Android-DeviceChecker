@@ -2,6 +2,7 @@ package cn.zwf.checker;
 
 import android.content.Context;
 import android.os.AsyncTask;
+import android.os.Environment;
 import android.util.Log;
 
 import java.io.File;

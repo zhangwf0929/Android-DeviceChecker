@@ -3,6 +3,7 @@ package cn.zwf.checker.sample;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.util.Log;
 import android.view.View;
 
 import java.util.HashMap;
@@ -32,6 +33,12 @@ public class MainActivity extends AppCompatActivity {
                         .setApiUrl("https://api.newgamepad.com/v2/games/exterior_types")
                         .setFileUrl(fileMd5Map)
                         .setImageUrl("http://oss.newgamepad.com/ng-images/c0/92/c092d127f4ef93771bae35893f7b7522.png")
+                        .setCallback(new Checker.Callback() {
+                            @Override
+                            public void onFinish(String result) {
+                                Log.d("checker", result);
+                            }
+                        })
                         .startCheck();
             }
         });
