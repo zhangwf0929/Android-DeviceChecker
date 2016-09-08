@@ -40,6 +40,7 @@ public class CheckerActivity extends AppCompatActivity {
     private DownloadTask mFileDownloadTask;
     private DownloadTask mImageDownloadTask;
 
+    private static final int FLAG_INIT = 0x00000;
     private static final int FLAG_LOCAL_DNS = 0x00001;
     private static final int FLAG_PUBLIC_DNS = 0x00010;
     private static final int FLAG_API = 0x00100;
@@ -47,7 +48,7 @@ public class CheckerActivity extends AppCompatActivity {
     private static final int FLAG_DOWNLOAD_IMAGE = 0x10000;
     private static final int FLAG_FINISH = 0x11111;
     // 没完成一项检测做一位与操作，0x11111时表示全部完成
-    private int mFlagFinish = 0x00000;
+    private int mFlagFinish;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -109,6 +110,7 @@ public class CheckerActivity extends AppCompatActivity {
     }
 
     private void startCheck() {
+        mFlagFinish = FLAG_INIT;
         tvResult.setText(null);
         showDialog();
 
@@ -259,18 +261,23 @@ public class CheckerActivity extends AppCompatActivity {
                             if (downloadFile == null) {
                                 result = getString(R.string.download_fail);
                             } else {
-                                result = getString(R.string.download_success) + "\n" +
-                                        getString(R.string.file_path) + downloadFile.path + "\n" +
-                                        getString(R.string.file_md5) + downloadFile.md5;
+                                if (!TextUtils.isEmpty(downloadFile.error)) {
+                                    result = getString(R.string.download_fail) + "\n" +
+                                            downloadFile.error;
+                                } else {
+                                    result = getString(R.string.download_success) + "\n" +
+                                            getString(R.string.file_path) + downloadFile.path + "\n" +
+                                            getString(R.string.file_md5) + downloadFile.md5;
 
-                                // 如果有提供md5
-                                if (!TextUtils.isEmpty(md5)) {
-                                    // 更新url展示
-                                    url = url + "\n" + getString(R.string.file_md5) + md5;
-                                    // 检查是否一致
-                                    result = result + "\n" + (md5.equals(downloadFile.md5) ?
-                                            getString(R.string.md5_match) :
-                                            getString(R.string.md5_not_match));
+                                    // 如果有提供md5
+                                    if (!TextUtils.isEmpty(md5)) {
+                                        // 更新url展示
+                                        url = url + "\n" + getString(R.string.file_md5) + md5;
+                                        // 检查是否一致
+                                        result = result + "\n" + (md5.equals(downloadFile.md5) ?
+                                                getString(R.string.md5_match) :
+                                                getString(R.string.md5_not_match));
+                                    }
                                 }
                             }
                             appendLog(getString(R.string.file_download) + "\n" + url + "\n-->\n" + result);
@@ -299,10 +306,16 @@ public class CheckerActivity extends AppCompatActivity {
                                 appendLog(getString(R.string.image_download) + "\n" + url + "\n-->\n" +
                                         getString(R.string.download_fail) + "\n");
                             } else {
-                                result = getString(R.string.download_success) + "\n" +
-                                        getString(R.string.file_path) + downloadFile.path;
-                                appendLog(getString(R.string.image_download) + "\n" + url + "\n-->\n" + result + "\n");
-                                appendImage(downloadFile.path);
+                                if (!TextUtils.isEmpty(downloadFile.error)) {
+                                    appendLog(getString(R.string.image_download) + "\n" + url + "\n-->\n" +
+                                            getString(R.string.download_fail) + "\n" +
+                                            downloadFile.error);
+                                } else {
+                                    result = getString(R.string.download_success) + "\n" +
+                                            getString(R.string.file_path) + downloadFile.path;
+                                    appendLog(getString(R.string.image_download) + "\n" + url + "\n-->\n" + result + "\n");
+                                    appendImage(downloadFile.path);
+                                }
                             }
                         }
                     }

@@ -2,7 +2,6 @@ package cn.zwf.checker;
 
 import android.content.Context;
 import android.os.AsyncTask;
-import android.os.Environment;
 import android.util.Log;
 
 import java.io.File;
@@ -58,7 +57,7 @@ public class DownloadTask extends AsyncTask<String, Integer, Map<String, Downloa
     }
 
     private DownloadTask.DownloadFile download(String url) {
-        DownloadTask.DownloadFile result = null;
+        DownloadTask.DownloadFile result = new DownloadTask.DownloadFile();
         InputStream in = null;
         FileOutputStream out = null;
         try {
@@ -89,13 +88,12 @@ public class DownloadTask extends AsyncTask<String, Integer, Map<String, Downloa
             }
 
             // 下载完成
-            result = new DownloadTask.DownloadFile();
             result.url = url;
             result.path = file.getAbsolutePath();
-            // 验证md5
             result.md5 = Utils.getMd5(result.path);
-        } catch (Exception e) {
+        } catch (IOException e) {
             e.printStackTrace();
+            result.error = e.toString();
         } finally {
             try {
                 if (out != null) {
@@ -139,5 +137,6 @@ public class DownloadTask extends AsyncTask<String, Integer, Map<String, Downloa
         public String url;
         public String md5;
         public String path;
+        public String error;
     }
 }
